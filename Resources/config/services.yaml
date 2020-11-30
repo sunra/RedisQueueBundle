@@ -1,0 +1,16 @@
+#services:
+#  # default configuration for services in *this* file
+#  _defaults:
+#    autowire: true
+#    autoconfigure: true
+#    public: false
+
+#  # makes classes in src/AppBundle available to be used as services
+#  SunraRedisQueueBundle\:
+#    resource: '../../*'
+
+
+#redis_queue.command.supervisor:
+#  class: Sunra\RedisQueueBundle\Command\SupervisorCommand
+#  tags:
+#    - { name: 'console.command', command: 'redis-queue:supervisor' }

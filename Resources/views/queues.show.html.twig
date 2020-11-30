@@ -1,0 +1,297 @@
+{%set menu = "in_queues" %}
+{% extends "SunraRedisQueueBundle::layout.html.twig" %}
+
+      {% block content %}
+      
+
+          {%verbatim%}
+          
+          
+          
+              <div ng-controller="RedisQueueQueuesCtrl">   
+              
+                                    
+                  <div title="Connected to backend" ng-show="autoUpdateEnabled" class="progress progress-striped active" id="connect_indicator">
+                      <div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+                  </div>
+                          
+
+                  <div ng-show="svState.config_changed" class="alert alert-warning"><strong>Configuration is changed</strong>! Restart supervisor to changes take effect.</div>
+                  
+                  
+                  <div ng-show="State.error.has" class="alert alert-danger"><strong>Server error {{State.error.status}}</strong>!  <a type="button" class="btn btn-default" href="{{State.error.url}}" target="_blank">Details</a></div>
+                  
+                  <div ng-show="State.info.has" class="alert alert-info"><strong>{{State.info.text}}</strong></div>
+              
+                  
+                  
+                  
+                  <p></p>
+
+
+                  <div ng-repeat="(queue_name, queue_state) in State">                      
+                      
+                      
+                      {{queue}}
+                      
+                     
+                      
+                      
+                                                
+                          
+                          <div class="panel panel-success" >
+                            <!-- Default panel contents -->
+                            <div class="panel-heading">{{queue_name}}</div>
+                                  
+                            
+                          
+                                <!-- Table -->
+                                <table class="table table-striped">
+                    
+                                  <tr ng-repeat="queue_state_size in queue_state | filter:filterShowableStates:queue_state_size"
+                                      ng-mouseover="showStateMenu(queue_state_size)"
+                                      ng-mouseleave="hideStateMenu(queue_state_size)"
+                                      height="40px"
+                                  >
+                                  
+                                  
+                                      <td class="col-md-4">{{queue_state_size.state}}</td>
+                                      <td>{{queue_state_size.size}}</td>
+                                      <td>
+                                      
+<div class="btn-group btn-group-xs" ng-show="queue_state_size.show_menu">
+  
+  <a  
+      ng-disabled="!isViewBtnEnabled_STATES(queue_state_size)" 
+      type="button" 
+      class="btn btn-default"
+      target="_blank"
+
+      href="getViewMessagesHref(queue_name,queue_state_size.state)"
+  ><span class="glyphicon glyphicon-eye-open"></span> view</a>
+  
+  <button ng-disabled="!isRestartBtnEnabled_STATES(queue_state_size)" type="button" class="btn btn-default"><span class="glyphicon glyphicon-repeat"></span> restart</button>
+  
+  
+  <button 
+    ng-click="clearQueue(queue_name,queue_state_size.state)"
+    ng-disabled="!isClearBtnEnabled_STATES(queue_state_size)" 
+    type="button" 
+    class="btn btn-default"
+  ><span class="glyphicon glyphicon-trash"></span> clear</button>
+</div>
+                                      
+                                      </td>
+
+                                  </tr>              
+                                  
+                                </table>
+                              </div> <!--panel-supervisor-->
+                          
+                          
+                          
+                          
+                    
+                  </div>
+                  
+
+              
+              
+              </div>
+
+          {%endverbatim%}
+          
+          
+      
+    {% endblock %}
+
+    
+    {% block before_bodyend_script %}
+<script src="{{ asset('bundles/sunraangular/js/thirdparty/angular-paginate-anything-master/src/paginate-anything.js') }}"></script>
+
+
+<script>
+
+			var RedisQueueApp = angular.module('RedisQueueApp', []);
+						
+			
+			RedisQueueApp.controller('RedisQueueQueuesCtrl', ['$scope', '$interval', '$http', '$element', '$window','$sce','$animate', 
+              function ($scope, $interval, $http, $element, $window, $sce, $animate) {
+				$scope.svState = {state_active:'-', 'active':false};
+				$scope.autoUpdateEnabled = true;
+                
+                $scope.viewMessagesUrl = '{{path("sunra_redis_queue_queues_show")}}';
+			
+				$scope.detectWindowNonActive = function () {
+					var w = angular.element($window);
+					w.bind('focus', function(e){
+				        $scope.autoUpdateEnabled = true;						
+					})
+					w.bind('blur', function(e){
+				        $scope.autoUpdateEnabled = false;
+					})
+				
+				}
+							
+				$scope.loadData = function () {
+					//console.log('loadSupervData');
+					if (!$scope.autoUpdateEnabled) return;
+					
+					
+					$http.get('{{path("sunra_redis_queue_queues_state")}}')
+					    .success(
+
+							 function(data){								
+								$scope.State = data.state;
+								$scope.queues_norm = data.queues_norm;							
+								//console.log('loaded', data.queues_norm);
+								
+								if($scope.stateChange) {
+									if ($scope.svState.state_text != $scope.LastState) {
+										$scope.stateChange = false;
+										$('#sv_stop_btn').button('reset');
+										$('#sv_start_btn').button('reset');
+									}
+								}
+							 }						
+					    ).
+						error(function(data, status, headers, config) {
+							
+							$scope.State = {error : {has: true,status: status, data: data, url: '{{path("sunra_redis_queue_queues_state")}}'}};
+								
+							//$scope.worker_error = $sce.trustAsHtml(data);
+							
+							//console.log(data, status, headers, config);
+						  // called asynchronously if an error occurs
+						  // or server returns response with an error status.
+						})					
+				}
+                
+                
+                $scope.queueClearBtnClick = function (queue_state_size) 
+                {
+                    console.log(queue_state_size);return;
+                    $scope.clearQueue(queue_state_size);
+                }
+                
+                
+                $scope.viewMessages = function (queue_name,queue_state)
+                {
+                    
+                }
+
+
+                $scope.getViewMessagesHref = function(queue_name,queue_state)
+                {
+                  return Routing.generate( 'sunra_redis_queue_messages_show', { queue_name:queue_name ,queue_state:queue_state });
+                }
+                
+                                
+                $scope.clearQueue = function (queue_name, queue_state) {
+										
+					$http.post('{{path("sunra_redis_queue_queues_clear")}}', {"queue_name":queue_name, "queue_state":queue_state})
+					    .success(
+
+							 function(data){
+                                 $scope.autoUpdateEnabled = true;
+                                 
+                                 if (data.ok) {
+                                     $scope.State.info = {text:data.text,has:true};
+                                 } else {
+                                     console.log('Error clearing queue state', data);
+                                 }
+                                 
+                                 
+							 }						
+					    ).
+						error(
+                            function(data, status, headers, config) {							
+							    $scope.State = {error : {has: true,status: status, data: data, url: '{{path("sunra_redis_queue_queues_state")}}'}};															
+						    }
+                        )					
+				}                
+				
+				
+				$scope.svStart = function (){
+					$scope.stateChange = true;
+					$scope.LastState = $scope.svState.state_text;
+					
+					$('#sv_start_btn').button('loading');
+					
+					$http.get('{{path("sunra_redis_queue_supervisor_start")}}')
+					    .success(
+							 function(data){					
+							    //$scope.svState.stateChange = false;			
+								//console.log('started', data);
+							 }						
+					    );					
+				}
+				
+				
+                $scope.svStop = function (){
+					$scope.stateChange = true;
+					$scope.LastState = $scope.svState.state_text;
+					$('#sv_stop_btn').button('loading');
+					
+					$http.get('{{path("sunra_redis_queue_supervisor_stop")}}')
+					    .success(
+							 function(data){
+								//$scope.svState.stateChange	= false;
+								//console.log('stopped', data);
+							 }						
+					    );					
+				}
+                
+                $scope.filterShowableStates = function(queue_state_size)
+                {
+                    //console.log(queue_state_size);
+                    return queue_state_size.show;
+                };		
+				
+                
+                $scope.showStateMenu = function(queue_state_size)
+                {
+                    queue_state_size.show_menu=true; $scope.autoUpdateEnabled = false;
+                }
+                
+                
+                $scope.hideStateMenu = function(queue_state_size)
+                {
+                    queue_state_size.show_menu=false; $scope.autoUpdateEnabled = true;
+                }
+                
+                
+
+  
+                $scope.isViewBtnEnabled_STATES = function(queue_state_size)
+                {
+                    return queue_state_size.size > 0;
+                }
+                
+                $scope.isRestartBtnEnabled_STATES = function(queue_state_size)
+                {
+                    return queue_state_size.size > 0 &&
+                      queue_state_size.state !== 'PUBLISHED' &&
+                      queue_state_size.state !== 'PROCESSED' 
+                    ;
+                }
+                
+                $scope.isClearBtnEnabled_STATES = function(queue_state_size)
+                {
+                    return queue_state_size.size > 0;
+                }
+                  
+                
+				
+				$interval(function(){
+				    $scope.loadData();
+				}, 3000);	
+				
+				$scope.detectWindowNonActive();
+				$scope.loadData();		
+
+            }]);	
+			
+        </script>
+    
+    {% endblock %} 

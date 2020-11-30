@@ -1,0 +1,14 @@
+{%set menu = "in_config" %}
+{% extends "SunraRedisQueueBundle::layout.html.twig" %}
+
+     {% block content %}
+
+          <h1>Config</h1>
+          {{config|d}}
+
+          <h1>Supervisor State</h1>
+          {{state|d}}
+      
+    {% endblock %}
+
+ 

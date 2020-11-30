@@ -1,0 +1,189 @@
+{%set menu = "in_messages" %}
+{% extends "SunraRedisQueueBundle::layout.html.twig" %}
+
+    {% block user_head_js %}
+        <script src="{{ asset('bundles/sunraangular/js/thirdparty/angular-paginate-anything/angular-paginate-anything-2.5.3/src/paginate-anything.js') }}"></script>
+    {% endblock %}
+
+      {% block content %}
+
+
+
+          <h1>{{queue_name}} <small>{{queue_state}}</small></h1>
+
+          {%verbatim%}
+          
+
+          
+              <div ng-controller="RedisQueueMessagesCtrl">
+
+                  <script type="text/ng-template" id="template/pagination/pagination.html">
+                      <ul class="pagination">
+                          <li ng-if="boundaryLinks" ng-class="{disabled: noPrevious()}"><a href ng-click="selectPage(1)">{{getText('first')}}</a></li>
+                          <li ng-if="directionLinks" ng-class="{disabled: noPrevious()}"><a href ng-click="selectPage(page - 1)">{{getText('previous')}}</a></li>
+                          <li ng-repeat="page in pages track by $index" ng-class="{active: page.active}"><a href ng-click="selectPage(page.number)">{{page.text}}</a></li>
+                          <li ng-if="directionLinks" ng-class="{disabled: noNext()}"><a href ng-click="selectPage(page + 1)">{{getText('next')}}</a></li>
+                          <li ng-if="boundaryLinks" ng-class="{disabled: noNext()}"><a href ng-click="selectPage(totalPages)">{{getText('last')}}</a></li>
+                      </ul>
+                  </script>
+
+
+                  <pagination
+                      total-items="totalMessages"
+                      items-per-page="messagesPerPage"
+                      ng-model="currentPage"
+                      ng-change="pageChanged()"
+                      max-size="10"
+                      boundary-links="true"
+                      rotation="false"
+
+                  ></pagination>
+
+
+                  <div ng-show="loading" class="progress progress-striped active" id="indicator">
+                      <div class="progress-bar progress-bar-success" role="progressbar" style="width: 100%"></div>
+                  </div>
+
+                  <div ng-show="loading_error" class="alert alert-danger"><strong>Loading messages error</strong>! {{loading_error_text}}.</div>
+
+
+                  <div ng-repeat="message in messages" ng-hide="loading || loading_error">
+
+
+
+                      <div class="panel panel-success" >
+                          <!-- Default panel contents -->
+                          <div class="panel-heading">{{message.id}}</div>
+
+
+
+                          <!-- Table -->
+                          <table class="table table-bordered table-condensed" >
+
+                              <tr ng-repeat="(field_name,field_value) in message"
+                                  ng-if="field_name !='id' && field_name !='queue'  "
+                                 >
+
+                                  <td class="col-md-4" ng-if="!(field_name == 'state' && field_value == queue_state)">{{field_name}}</td>
+
+                                  <td ng-if="field_name != 'timeline' && field_name != 'state'">{{field_value}}</td>
+
+                                  <td ng-if="field_name == 'timeline'">
+
+<table class="table table-condensed" >
+    <tr ng-repeat="value in field_value | orderBy:['sort_by_date','sort_by_state']:false">
+        <td>{{value.state}}</td>
+        <td>{{value.date}}</td>
+        <td>{{value.comment}}</td>
+    </tr>
+</table>
+
+                                  </td>
+
+
+                                  <td ng-if="field_name == 'state' && field_value != queue_state " class="danger">
+                                      {{field_value}}
+                                  </td>
+
+
+
+
+                              </tr>
+
+                          </table>
+
+
+                      </div> <!--panel-supervisor-->
+
+
+
+
+
+                  </div>
+
+
+
+              
+              
+              </div>
+
+          {%endverbatim%}
+          
+          
+      
+    {% endblock %}
+
+    
+    {% block before_bodyend_script %}
+    
+        <script>		    
+
+			var RedisQueueApp = angular.module('RedisQueueApp', ['ui.bootstrap']);
+
+            RedisQueueApp.config(function($sceDelegateProvider){
+               // tmpl_url = $locationProvider.protocol() + $locationProvider.host() + '/bundles/sunraredisqueue/paginate-anything.html';
+
+                //console.log(tmpl_url);
+                //$sceDelegateProvider.resourceUrlWhitelist(['self', tmpl_url]);
+
+            });
+
+			
+			RedisQueueApp.controller('RedisQueueMessagesCtrl', ['$scope', '$interval', '$http', '$element', '$window','$sce','$animate','$location',
+              function ($scope, $interval, $http, $element, $window, $sce, $animate, $location) {
+
+                $scope.queue_name = '{{queue_name}}';
+                $scope.queue_state = '{{queue_state}}';
+                $scope.messages = {};
+                $scope.totalMessages = 0;
+                $scope.currentPage = 1;
+                $scope.messagesPerPage = 50;
+                $scope.loading = false;
+                $scope.loading_error = false;
+                $scope.loading_error_text = '';
+							
+				$scope.loadData = function () {
+
+                    //console.log('TUT');
+                    $scope.loading = true;
+                    $scope.loading_error = false;
+
+                    $http.get(Routing.generate( 'sunra_redis_queue_messages_get', {
+                                queue_name:$scope.queue_name,
+                                queue_state:$scope.queue_state,
+                                page:$scope.currentPage,
+                                num_messages:$scope.messagesPerPage
+                        }) )
+                        .success(
+                            function(data)
+                            {
+                                $scope.messages = data.messages;
+                                $scope.totalMessages = data.total_messages;
+                                //console.log('TUT 2', data);
+                                $scope.loading = false;
+                            }
+                        )
+                        .error(function(data, status, headers, config)
+                            {
+                                $scope.State = {error : {has: true,status: status, data: data, url: '{{path("sunra_redis_queue_queues_state")}}'}};
+                                console.log('error',data,status);
+                                $scope.loading = false;
+                                $scope.loading_error = true;
+                                $scope.loading_error_text = 'Server response status: '+status;
+                            });
+
+				};
+
+
+              $scope.$watch("currentPage", function( newValue ) {
+                  console.log( newValue );
+                  $scope.loadData();
+              });
+
+              //$scope.loadData();
+
+            }]);	
+			
+        </script>
+    
+    {% endblock %} 

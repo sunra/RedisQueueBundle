@@ -1,0 +1,22 @@
+{
+  "name": "sunra/redis-queue-bundle",
+  "description": "All in one Redis based messages queue and worker supervisor. With GUI on board",
+  "keywords": ["redis", "queue", "messages", "worker", "supervisor"],
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Sunra",
+      "email": "sunra@yandex.ru"
+    }
+  ],
+  "require": {
+    "snc/redis-bundle": "2.0.0",
+    "friendsofsymfony/jsrouting-bundle": "2.4.0",
+    "sunra/dbug-twig-extension": ">=0.2.0"
+  },
+  "autoload": {
+    "psr-0": { "Sunra\\RedisQueueBundle": "RedisQueue" }
+  },
+  "target-dir": "Sunra/RedisQueueBundle"
+}
