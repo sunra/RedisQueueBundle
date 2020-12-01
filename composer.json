@@ -18,7 +18,6 @@
     "symfony/framework-bundle|": "^3.4"
   },
   "autoload": {
-    "psr-0": { "Sunra\\RedisQueueBundle": "RedisQueue" }
-  },
-  "target-dir": "Sunra/RedisQueueBundle"
+    "psr-0": { "Sunra\\RedisQueueBundle": "src/" }
+  }
 }
