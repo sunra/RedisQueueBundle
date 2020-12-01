@@ -1,4 +1,4 @@
-# Redis Queue Bundle
+# Redis Queue Bundle for Symfony
 
 All in one Redis based messages queue and worker supervisor. With GUI on board
 
